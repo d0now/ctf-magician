@@ -1,56 +1,48 @@
-from __future__ import annotations
-import typing
-
-if typing.TYPE_CHECKING:
-    from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Iterator, Optional
+from abc import ABC, abstractproperty
 
 import peewee
-from cmag.challenge.manager_impl import CMagChallengeManagerImpl
-from cmag.challenge.model import CMagChallengeModel
-from cmag.challenge.challenge import CMagChallenge
+from pathlib import Path
+from logging import Logger
 
-class CMagChallengeManager(CMagChallengeManagerImpl):
+if TYPE_CHECKING:
+    from cmag.project import CMagProject
+    from cmag.database import CMagDatabase
 
-    def __repr__(self) -> str:
-        return f"<CMagChallengeManager challenges={len(self.list_challenges())}>"
+from .challenge import CMagChallenge
+from .model import CMagChallengeModel
+from. exceptions import *
 
-    def add_challenge(self, name: str) -> Optional[CMagChallenge]:
+class CMagChallengeManagerMixin(ABC):
 
+    def add_challenge(self, fields: dict = {}) -> Optional[CMagChallenge]:
+        
         try:
-            if not (record := self.create_challenge_record(name=name)):
-                self.log.error(f"failed to create challenge record: {name}")
-                return None
+            record = CMagChallengeModel.create(**fields)
+        except peewee.IntegrityError as exc:
+            raise CMagChallengeExistsError from exc
 
-        except peewee.IntegrityError:
-            self.log.error(f"challenge {name} exists.")
-            return None
-
-        return CMagChallenge(self.project, record.id)
+        return CMagChallenge(self, record.id)
 
     def get_challenge(self, id: int) -> Optional[CMagChallenge]:
-
-        if not (record := self.check_challenge_record_exists_by_id(id)):
-            self.log.error(f"failed to get challenge record: {id}")
-            return None
-
-        return CMagChallenge(self.project, record.id)
+        if (record := CMagChallengeModel.get_or_none(id=id)):
+            return CMagChallenge(self, record.id)
 
     def get_challenge_by_name(self, name: str) -> Optional[CMagChallenge]:
+        if (record := CMagChallengeModel.get_or_none(name=name)):
+            return CMagChallenge(self, record.id)
 
-        if not (record := self.check_challenge_record_exists(CMagChallengeModel.name == name)):
-            self.log.error(f"failed to get challenge record: {name}")
-            return None
+    def get_challenge_with_check(self, id: int) -> CMagChallenge:
+        if not (challenge := self.get_challenge(id)):
+            raise CMagChallengeNotFoundError(f"'{id}' not found.")
+        return challenge
 
-        return CMagChallenge(self.project, record.id)
+    def del_challenge(self, id: int) -> bool:
+        if (challenge := self.get_challenge(id)):
+            challenge.del_files()
+            CMagChallengeModel.delete_by_id(id)
 
-    def list_challenges(self) -> List[CMagChallenge]:
-        return [CMagChallenge(self.project, record.id) for record in self.select_challenge_records()]
-
-    def remove_challenge(self, id: int) -> bool:
-        
-        if not (record := self.check_challenge_record_exists_by_id(id)):
-            self.log.error(f"failed to get challenge record: {id}")
-            return False
-
-        record.delete_instance()
-        return True
+    def challenges(self) -> Iterator[Optional[CMagChallenge]]:
+        for record in CMagChallengeModel.select(CMagChallengeModel.id):
+            if (challenge := self.get_challenge(record.id)):
+                yield challenge

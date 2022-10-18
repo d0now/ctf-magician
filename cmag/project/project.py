@@ -18,13 +18,5 @@ class CMagProject(CMagProjectImpl):
 
         super().__init__(project_dir, log_level=log_level, log_to_stream=log_to_stream, log_to_file=log_to_file)
 
-        if load_all:
-            
-            loaded, total = self.plugin_manager.load_all(True)
-            if total:
-                self.log.info(f"{loaded} of {total} plugins loaded.")
-            else:
-                self.log.warning(f"no plugins loaded.")
-
     def __repr__(self) -> str:
         return f"<CMagProject path={self.dir}>"

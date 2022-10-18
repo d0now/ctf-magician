@@ -28,6 +28,6 @@ def open_challenge(args):
         return None
 
     if args.id:
-        return project.challenge_manager.get_challenge(args.id)
+        return project.get_challenge(args.id)
     elif args.name:
-        return project.challenge_manager.get_challenge_by_name(args.name)
+        return project.get_challenge_by_name(args.name)

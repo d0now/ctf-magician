@@ -19,7 +19,7 @@ def challenge_argparse(parser: ArgumentParser):
 
 def challenge_add_handler(args):
     project = open_project(args)
-    challenge = project.challenge_manager.add_challenge(args.name)
+    challenge = project.add_challenge(dict(name=args.name))
     if not challenge:
         print("failed.")
     else:
@@ -41,10 +41,8 @@ def challenge_list_handler(args):
         print("failed.")
         return -1
     
-    challenges = project.challenge_manager.list_challenges()
-    
     print(colored(f"{'id':4} | name", attrs=['bold']))
-    for challenge in challenges:
+    for challenge in project.challenges():
         print(f"{str(challenge.id):4} | {challenge.name}")
 
     return 0
@@ -64,9 +62,9 @@ def challenge_info_handler(args):
         return -1
 
     if args.id:
-        challenge = project.challenge_manager.get_challenge(args.id)
+        challenge = project.get_challenge(args.id)
     elif args.name:
-        challenge = project.challenge_manager.get_challenge_by_name(args.name)
+        challenge = project.get_challenge_by_name(args.name)
     else:
         print("failed.")
         return -1
@@ -83,7 +81,6 @@ def challenge_info_handler(args):
 def challenge_info_argparse(parser: ArgumentParser):
     parser.set_defaults(func=challenge_info_handler)
 
-
 # challenge ... remove ...
 
 def challenge_remove_handler(args):
@@ -94,9 +91,9 @@ def challenge_remove_handler(args):
         return -1
 
     if args.id:
-        challenge = project.challenge_manager.get_challenge(args.id)
+        challenge = project.get_challenge(args.id)
     elif args.name:
-        challenge = project.challenge_manager.get_challenge_by_name(args.name)
+        challenge = project.get_challenge_by_name(args.name)
     else:
         raise Exception
 
@@ -104,7 +101,7 @@ def challenge_remove_handler(args):
         print("failed.")
         return -1
 
-    if not project.challenge_manager.remove_challenge(challenge.id):
+    if not project.del_challenge(challenge.id):
         print("failed.")
         return -1
 
@@ -123,7 +120,6 @@ def challenge_file_handler(args):
 def challenge_file_argparse(parser: ArgumentParser):
     parser.set_defaults(func=challenge_file_handler)
 
-
 # challenge ... file ... create ...
 
 def challenge_file_create_handler(args):
@@ -132,7 +128,7 @@ def challenge_file_create_handler(args):
         print("failed.")
         return -1
 
-    if not (file := challenge.create_file(args.path)):
+    if not (file := challenge.add_file(args.path, args.destination, not args.dont_copy, args.link)):
         print("failed.")
         return -1
 
@@ -142,6 +138,9 @@ def challenge_file_create_handler(args):
 def challenge_file_create_argparse(parser: ArgumentParser):
     parser.set_defaults(func=challenge_file_create_handler)
     parser.add_argument("path", type=Path)
+    parser.add_argument("-d", "--destination", type=Path)
+    parser.add_argument("-c", "--dont-copy", action='store_true')
+    parser.add_argument("-l", "--link", action='store_true')
 
 
 # challenge ... file ... add ...
@@ -175,10 +174,8 @@ def challenge_file_list_handler(args):
         print("failed.")
         return -1
 
-    files = challenge.list_files()
-
     print(colored(f"{'id':4} | name", attrs=['bold']))
-    for file in files:
+    for file in challenge.files():
         print(f"{str(file.id):4} | {file.path}")
 
     return 0
@@ -195,10 +192,12 @@ def challenge_file_remove_handler(args):
         print("failed.")
         return -1
 
-    challenge.remove_file()
+    if (file := challenge.get_file_by_path(args.path)):
+        file.delete()
 
 def challenge_file_remove_argparse(parser: ArgumentParser):
     parser.set_defaults(func=challenge_file_remove_handler)
+    parser.add_argument("path", type=Path)
 
 
 # factory

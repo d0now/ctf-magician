@@ -4,15 +4,20 @@ if typing.TYPE_CHECKING:
     from typing import Any, Dict, List
     from io import IOBase
 
+
 import sys
 from logging import Logger
 from pathlib import Path
-from cmag.database import CMagDatabase
-from cmag.interface.logger import CMagLogger
-from cmag.plugin.manager import CMagPluginManager
-from cmag.challenge.manager import CMagChallengeManager
+from peewee import SqliteDatabase
 
-class CMagProjectImpl:
+from cmag.database import CMagDatabaseProxy
+from cmag.database.models import CMagChallengeModel, CMagFileModel
+
+from cmag.interface.logger import CMagLogger
+
+from cmag.challenge import CMagChallengeManagerMixin
+
+class CMagProjectImpl(CMagChallengeManagerMixin):
 
     def __init__(self, project_dir:str, log_level: int = CMagLogger.INFO, log_to_stream: IOBase = sys.stderr, log_to_file: str = ''):
         
@@ -23,11 +28,12 @@ class CMagProjectImpl:
         self._log = self.logger.log
         self.log.debug("CMagLogger initialized.")
 
-        self._plginmgr = CMagPluginManager(self)
-        self.log.debug("CMagPluginManager initialized.")
+        self._database = SqliteDatabase(self.dbpath)
+        self.database.connect(reuse_if_open=True)
+        CMagDatabaseProxy.initialize(self.database)
 
-        self._challmgr = CMagChallengeManager(self)
-        self.log.debug("CMagChallengeManager initialized.")
+        CMagChallengeModel.create_table()
+        CMagFileModel.create_table()
 
     # properties
 
@@ -40,8 +46,12 @@ class CMagProjectImpl:
         return Path(self.dir)
 
     @property
-    def db(self):
-        return CMagDatabase(self.path / 'project.db')
+    def dbpath(self):
+        return self.path / 'project.db'
+
+    @property
+    def database(self):
+        return self._database
 
     # logging methods
 
@@ -52,15 +62,3 @@ class CMagProjectImpl:
     @property
     def log(self) -> Logger:
         return self._log
-
-    # plugin methods
-
-    @property
-    def plugin_manager(self):
-        return self._plginmgr
-
-    # challenge methods
-    
-    @property
-    def challenge_manager(self):
-        return self._challmgr

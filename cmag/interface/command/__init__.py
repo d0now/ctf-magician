@@ -7,7 +7,7 @@ from .plugin_handler import factory_plugin_subparsers
 def factory_cli_subparsers(parser: ArgumentParser, interface_subparsers: _SubParsersAction):
     
     cli_subparser = interface_subparsers.add_parser("cli")
-    cli_subparser.add_argument("-p", "--project", type=Path, default=Path("."))
+    cli_subparser.add_argument("-p", "--project", type=Path, default=Path("."), required=True)
     cli_subparser.add_argument("--log-level", choices=['debug', 'info', 'warning', 'error', 'critical'], default='info')
     cli_subparser.add_argument("--log-stream", choices=['stdout', 'stderr', 'null'], default='stdout')
     cli_subparser.add_argument("--log-file", type=Path)
