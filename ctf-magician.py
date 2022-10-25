@@ -1,1 +1,1 @@
-from cmag.interface.main import start; start()
+from cmag.cli import start; start()

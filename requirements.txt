@@ -1,6 +1,5 @@
 colorama
 termcolor
-peewee
 dataclasses-json
 pytest
 beautifulsoup4

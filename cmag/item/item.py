@@ -38,19 +38,19 @@ class Item(ItemBase):
             raise CMagItemNotImplemented
 
         if not (path := Path(_path)).is_dir():
-            raise CMagInvalidItemPath
+            raise CMagInvalidItemPath(path)
 
         if not (cfgpath := path / ITEM_CONFIG_FILENAME).exists():
-            raise CMagInvalidItemPath
+            raise CMagInvalidItemPath(path)
 
         if not (cfgdata := cfgpath.read_text()):
-            raise CMagInvalidItemConfig
+            raise CMagInvalidItemConfig(cfgpath)
 
         if not (config := cls.cfgbase.from_json(cfgdata)):
-            raise CMagInvalidItemConfig
+            raise CMagInvalidItemConfig(cfgpath)
 
         if cls.cfgbase.type != config.type:
-            raise CMagInvalidItemConfig
+            raise CMagInvalidItemConfig(cfgpath)
 
     @classmethod
     def check(cls, path: str | Path) -> bool:
@@ -61,7 +61,7 @@ class Item(ItemBase):
             return False
 
     @classmethod
-    def makeat(cls, _path: str | Path, exist_ok=False, **_config):
+    def makeat(cls, _path: str | Path, exist_ok=False, **_config) -> Path:
         
         path = Path(_path)
         path.mkdir(exist_ok=exist_ok)
@@ -71,6 +71,8 @@ class Item(ItemBase):
             raise CMagInvalidItemConfig
 
         (path / ITEM_CONFIG_FILENAME).write_text(config.to_json())
+
+        return path
 
     def __gt__(self, target: str) -> Item:
         return ItemManager.from_path(self.path / target)
@@ -87,9 +89,9 @@ class Item(ItemBase):
                 yield ItemManager.from_path(path)
 
     def has_child(self) -> bool:
-        return len(self.iter_childs()) != 0
+        return len(list(self.iter_childs())) != 0
 
-    def get_child(self, name: str = '') -> Item | None:
+    def get_child(self, name: str) -> Item | None:
         for child in self.iter_childs():
             if child.path.name == name:
                 return child
@@ -99,3 +101,6 @@ class Item(ItemBase):
             if child.path.name == name:
                 rmtree(child.path)
                 return child.path
+
+    def dump(self) -> str:
+        return ''

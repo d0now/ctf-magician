@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, List, Type, TypeVar
 from pathlib import Path
 
+from .base import ItemManagerBase, register_item_to
 from .defaults import ITEM_CONFIG_FILENAME
 from .exceptions import *
 
@@ -9,37 +10,7 @@ if TYPE_CHECKING:
     from .item import Item
 
 
-class ItemManager:
-
-    _itemclasses: List[Type[Item]] = []
-
-    @classmethod
-    def register(cls, itemclass: Item) -> None:
-
-        from .item import Item
-
-        if not issubclass(itemclass, Item):
-            raise CMagItemNotImplemented
-
-        if cls.has_item_of_type(itemclass.type):
-            raise CMagItemExists
-
-        cls._itemclasses.append(itemclass)
-
-    @classmethod
-    def unregister(cls, type: int) -> None:
-        if (item := cls.get_item_of_type(type)):
-            cls._itemclasses.remove(item)
-
-    @classmethod
-    def get_item_of_type(cls, type: int) -> Type[Item] | None:
-        for registered in cls._itemclasses:
-            if registered.cfgbase.type == type:
-                return registered
-
-    @classmethod
-    def has_item_of_type(cls, type: int) -> bool:
-        return cls.get_item_of_type(type) != None
+class ItemManager(ItemManagerBase):
 
     @classmethod
     def get_item_type(cls, _path: str | Path) -> int:
@@ -89,10 +60,4 @@ class ItemManager:
         return itemclass(_path)
 
 
-T = TypeVar('T')
-
-def register(itemclass: T) -> T:
-    if not hasattr(itemclass, '__item_manager_registered'):
-        ItemManager.register(itemclass)
-        setattr(itemclass, '__item_manager_registered', True)
-    return itemclass
+register_item = register_item_to(ItemManager)
